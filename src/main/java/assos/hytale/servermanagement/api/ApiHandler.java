@@ -2,7 +2,9 @@ package assos.hytale.servermanagement.api;
 
 import assos.hytale.servermanagement.config.ManagementConfig;
 import assos.hytale.servermanagement.whitelist.PlayerResolutionException;
+import assos.hytale.servermanagement.whitelist.WhitelistClearResult;
 import assos.hytale.servermanagement.whitelist.WhitelistEntry;
+import assos.hytale.servermanagement.whitelist.WhitelistRemovalResult;
 import assos.hytale.servermanagement.whitelist.WhitelistService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -233,18 +235,20 @@ public class ApiHandler implements HttpHandler {
     }
 
     private void handleWhitelistRemove(HttpExchange exchange, String identifier) throws Exception {
-        WhitelistEntry entry = await(whitelist.remove(decode(identifier)));
+        WhitelistRemovalResult result = await(whitelist.remove(decode(identifier)));
         JsonObject root = Json.success();
         root.addProperty("message", "Player removed from the whitelist");
-        root.add("entry", toJson(entry));
+        root.addProperty("disconnected", result.disconnected());
+        root.add("entry", toJson(result.entry()));
         send(exchange, 200, root);
     }
 
     private void handleWhitelistClear(HttpExchange exchange) throws Exception {
-        int removed = await(whitelist.clear());
+        WhitelistClearResult result = await(whitelist.clear());
         JsonObject root = Json.success();
         root.addProperty("message", "Whitelist cleared");
-        root.addProperty("removed", removed);
+        root.addProperty("removed", result.removed());
+        root.addProperty("disconnected", result.disconnected());
         send(exchange, 200, root);
     }
 

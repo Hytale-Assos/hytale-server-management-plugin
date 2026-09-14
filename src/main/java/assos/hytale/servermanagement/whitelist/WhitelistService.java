@@ -1,8 +1,12 @@
 package assos.hytale.servermanagement.whitelist;
 
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.auth.ProfileServiceClient;
+import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.accesscontrol.AccessControlModule;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -12,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BooleanSupplier;
 
 /**
  * Service layer around Hytale's native whitelist.
@@ -32,12 +37,15 @@ public class WhitelistService {
     private final PermissionsModule permissions;
     private final ProfileResolver profiles;
     private final ExecutorService executor;
+    private final BooleanSupplier disconnectOnRemoval;
 
     public WhitelistService(@Nonnull AccessControlModule accessControl,
-            @Nonnull PermissionsModule permissions) {
+            @Nonnull PermissionsModule permissions,
+            @Nonnull BooleanSupplier disconnectOnRemoval) {
         this.accessControl = accessControl;
         this.permissions = permissions;
         this.profiles = new ProfileResolver(permissions);
+        this.disconnectOnRemoval = disconnectOnRemoval;
         this.executor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "HytaleServerManagement-Whitelist");
             thread.setDaemon(true);
@@ -85,7 +93,7 @@ public class WhitelistService {
     }
 
     @Nonnull
-    public CompletableFuture<WhitelistEntry> remove(@Nonnull String identifier) {
+    public CompletableFuture<WhitelistRemovalResult> remove(@Nonnull String identifier) {
         return supplyAsync(() -> {
             ProfileServiceClient.PublicGameProfile profile = profiles.resolve(identifier);
             UUID uuid = profile.getUuid();
@@ -94,18 +102,86 @@ public class WhitelistService {
                         "'" + display(profile) + "' is not whitelisted");
             }
             accessControl.disallowJoin(uuid);
-            return new WhitelistEntry(uuid, profile.getUsername());
+
+            boolean disconnected = false;
+            if (disconnectOnRemoval.getAsBoolean()) {
+                disconnected = disconnectIfOnline(uuid);
+            }
+            return new WhitelistRemovalResult(new WhitelistEntry(uuid, profile.getUsername()), disconnected);
         });
     }
 
     @Nonnull
-    public CompletableFuture<Integer> clear() {
-        return supplyAsync(accessControl::disallowAllJoins);
+    public CompletableFuture<WhitelistClearResult> clear() {
+        return supplyAsync(() -> {
+            int removed = accessControl.disallowAllJoins();
+            int disconnected = 0;
+            if (disconnectOnRemoval.getAsBoolean()) {
+                disconnected = disconnectAllPlayers();
+            }
+            return new WhitelistClearResult(removed, disconnected);
+        });
     }
 
     @Nonnull
     public ProfileResolver getProfileResolver() {
         return profiles;
+    }
+
+    /**
+     * Disconnects an online player if they no longer have permission to join.
+     *
+     * @param uuid the player UUID
+     * @return {@code true} when an online player was disconnected
+     */
+    private boolean disconnectIfOnline(@Nonnull UUID uuid) {
+        Universe universe = Universe.get();
+        if (universe == null) {
+            return false;
+        }
+        PlayerRef player = universe.getPlayer(uuid);
+        if (player == null || !player.isValid()) {
+            return false;
+        }
+        if (accessControl.isAllowedToJoin(uuid)) {
+            return false;
+        }
+        PacketHandler connection = player.getPacketHandler();
+        if (connection == null) {
+            return false;
+        }
+        connection.disconnect(Message.raw("You have been removed from the server whitelist."));
+        return true;
+    }
+
+    /**
+     * Disconnects every online player that no longer has permission to join.
+     * Players keeping the permission through a group are left connected.
+     *
+     * @return the number of players disconnected
+     */
+    private int disconnectAllPlayers() {
+        Universe universe = Universe.get();
+        if (universe == null) {
+            return 0;
+        }
+        int count = 0;
+        for (PlayerRef player : List.copyOf(universe.getPlayers())) {
+            if (player == null || !player.isValid()) {
+                continue;
+            }
+            UUID uuid = player.getUuid();
+            if (accessControl.isAllowedToJoin(uuid)) {
+                continue;
+            }
+            PacketHandler connection = player.getPacketHandler();
+            if (connection == null) {
+                continue;
+            }
+            connection.disconnect(Message.raw("You have been removed from the server whitelist."));
+            count++;
+        }
+        return count;
     }
 
     public void shutdown() {

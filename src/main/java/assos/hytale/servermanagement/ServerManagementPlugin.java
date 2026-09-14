@@ -55,7 +55,8 @@ public class ServerManagementPlugin extends JavaPlugin implements ManagementFaca
             return;
         }
 
-        whitelistService = new WhitelistService(accessControl, permissions);
+        whitelistService = new WhitelistService(accessControl, permissions,
+                () -> config.get().isDisconnectOnWhitelistRemoval());
 
         ManagementConfig managementConfig = config.get();
         if (!managementConfig.isApiEnabled()) {

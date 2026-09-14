@@ -44,6 +44,10 @@ public class ManagementConfig {
                     (config, value, info) -> config.logRequests = value,
                     (config, info) -> config.logRequests)
             .add()
+            .append(new KeyedCodec<>("DisconnectOnWhitelistRemoval", Codec.BOOLEAN),
+                    (config, value, info) -> config.disconnectOnWhitelistRemoval = value,
+                    (config, info) -> config.disconnectOnWhitelistRemoval)
+            .add()
             .build();
 
     private boolean apiEnabled = true;
@@ -53,6 +57,7 @@ public class ManagementConfig {
     private boolean apiRequireAuth = true;
     private boolean allowRemoteManagement = false;
     private boolean logRequests = true;
+    private boolean disconnectOnWhitelistRemoval = true;
 
     private ManagementConfig() {
     }
@@ -122,5 +127,13 @@ public class ManagementConfig {
 
     public void setLogRequests(boolean logRequests) {
         this.logRequests = logRequests;
+    }
+
+    public boolean isDisconnectOnWhitelistRemoval() {
+        return disconnectOnWhitelistRemoval;
+    }
+
+    public void setDisconnectOnWhitelistRemoval(boolean disconnectOnWhitelistRemoval) {
+        this.disconnectOnWhitelistRemoval = disconnectOnWhitelistRemoval;
     }
 }
