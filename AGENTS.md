@@ -68,6 +68,7 @@ n'existe, le signaler explicitement plutôt que de l'inventer.
 - **Ne jamais committer de secret** : token API, clé, mot de passe, fichier
   `management_config.json` ou `.bak` généré à l'exécution.
 - Ne jamais forcer un push (`--force`), ni réécrire l'historique publié.
+- Ne jamais utiliser `--no-verify` (ou équivalent) pour contourner un hook git.
 - Ne jamais modifier la configuration git (`user.name`, hooks, etc.).
 - Ne jamais ajouter, supprimer ou modifier une dépendance sans validation.
 - Ne jamais supprimer ni contourner une protection de sécurité existante
