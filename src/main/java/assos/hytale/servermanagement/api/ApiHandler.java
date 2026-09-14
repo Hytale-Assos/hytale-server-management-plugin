@@ -46,6 +46,7 @@ public class ApiHandler implements HttpHandler {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final String BASE_PATH = "/api/v1";
     private static final long ACTION_TIMEOUT_SECONDS = 15L;
+    private static final String RESPONSE_SENT_ATTRIBUTE = "assos.servermanagement.responseSent";
 
     private final ManagementConfig config;
     private final WhitelistService whitelist;
@@ -70,19 +71,39 @@ public class ApiHandler implements HttpHandler {
             String[] segments = relativeSegments(path);
             route(exchange, method, segments);
         } catch (ApiException exception) {
-            send(exchange, exception.getStatus(), Json.error(exception.getCode(), exception.getMessage()));
+            safeSendError(exchange, exception.getStatus(), exception.getCode(), exception.getMessage());
         } catch (PlayerResolutionException exception) {
-            send(exchange, 404, Json.error("player_not_found", exception.getMessage()));
+            safeSendError(exchange, 404, "player_not_found", exception.getMessage());
         } catch (JsonSyntaxException exception) {
-            send(exchange, 400, Json.error("invalid_json", "Request body is not valid JSON"));
+            safeSendError(exchange, 400, "invalid_json", "Request body is not valid JSON");
         } catch (IllegalArgumentException exception) {
-            send(exchange, 400, Json.error("bad_request", exception.getMessage()));
+            safeSendError(exchange, 400, "bad_request", exception.getMessage());
         } catch (Exception exception) {
             LOGGER.at(Level.WARNING).withCause(exception).log("Management API request failed: %s %s", method, path);
-            send(exchange, 500, Json.error("internal_error", "Unexpected server error"));
+            safeSendError(exchange, 500, "internal_error", "Unexpected server error");
         } finally {
             exchange.close();
         }
+    }
+
+    /**
+     * Sends an error response unless the connection was already terminated, for
+     * example by a reload that restarted the HTTP server from this handler.
+     */
+    private void safeSendError(HttpExchange exchange, int status, String code, String message) {
+        if (isResponseSent(exchange)) {
+            return;
+        }
+        try {
+            send(exchange, status, Json.error(code, message));
+        } catch (IOException exception) {
+            LOGGER.at(Level.FINE).withCause(exception).log("Failed to send error response for %s",
+                    exchange.getRequestURI().getPath());
+        }
+    }
+
+    private static boolean isResponseSent(HttpExchange exchange) {
+        return Boolean.TRUE.equals(exchange.getAttribute(RESPONSE_SENT_ATTRIBUTE));
     }
 
     private void route(HttpExchange exchange, String method, String[] segments) throws Exception {
@@ -104,10 +125,7 @@ public class ApiHandler implements HttpHandler {
 
         if (segments.length == 1 && "reload".equals(segments[0])) {
             requireMethod(method, "POST");
-            facade.reload();
-            JsonObject root = Json.success();
-            root.addProperty("message", "Configuration reloaded");
-            send(exchange, 200, root);
+            handleReload(exchange);
             return;
         }
 
@@ -127,6 +145,30 @@ public class ApiHandler implements HttpHandler {
         root.addProperty("status", "ok");
         root.addProperty("whitelistEnabled", whitelist.isEnabled());
         send(exchange, 200, root);
+    }
+
+    /**
+     * Sends the acknowledgement first, then reloads on a separate thread. The
+     * reload restarts the HTTP server, so it must not run while this exchange is
+     * still being written.
+     */
+    private void handleReload(HttpExchange exchange) throws IOException {
+        JsonObject root = Json.success();
+        root.addProperty("message", "Configuration reloaded; the API is restarting");
+        send(exchange, 200, root);
+
+        Thread reloadThread = new Thread(() -> {
+            try {
+                Thread.sleep(200L);
+                facade.reload();
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            } catch (RuntimeException exception) {
+                LOGGER.at(Level.WARNING).withCause(exception).log("Management API reload failed");
+            }
+        }, "HytaleServerManagement-Reload");
+        reloadThread.setDaemon(true);
+        reloadThread.start();
     }
 
     private void handleWhitelistRoot(HttpExchange exchange, String method) throws Exception {
@@ -297,6 +339,7 @@ public class ApiHandler implements HttpHandler {
 
     private void send(HttpExchange exchange, int status, JsonObject body) throws IOException {
         byte[] payload = Json.write(body).getBytes(StandardCharsets.UTF_8);
+        exchange.setAttribute(RESPONSE_SENT_ATTRIBUTE, Boolean.TRUE);
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         if (config.isLogRequests()) {
             LOGGER.at(Level.FINE).log("%s %s -> %d", exchange.getRequestMethod(),

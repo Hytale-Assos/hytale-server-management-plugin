@@ -82,7 +82,10 @@ public class ServerManagementPlugin extends JavaPlugin implements ManagementFaca
     }
 
     /**
-     * Restarts the REST API with the current configuration values.
+     * Reloads {@code management_config.json} from disk and restarts the REST API.
+     *
+     * <p>The config is re-read from the file, so edits made while the server runs
+     * take effect.</p>
      */
     @Override
     public void reload() {
@@ -90,10 +93,22 @@ public class ServerManagementPlugin extends JavaPlugin implements ManagementFaca
             apiServer.stop();
             apiServer = null;
         }
+
+        Config<ManagementConfig> reloaded = new Config<>(getDataDirectory(), CONFIG_NAME, ManagementConfig.CODEC);
+        try {
+            reloaded.load().join();
+            this.config = reloaded;
+        } catch (RuntimeException exception) {
+            LOGGER.at(Level.SEVERE).withCause(exception)
+                    .log("Failed to reload management_config.json; keeping the previous configuration");
+        }
+
         ManagementConfig managementConfig = config.get();
         if (managementConfig.isApiEnabled() && whitelistService != null) {
             ensureToken(managementConfig);
             startApi(managementConfig);
+        } else if (!managementConfig.isApiEnabled()) {
+            LOGGER.at(Level.INFO).log("Management REST API is disabled in configuration");
         }
     }
 
