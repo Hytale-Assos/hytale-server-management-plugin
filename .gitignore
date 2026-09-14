@@ -10,3 +10,7 @@ run/
 .project
 .settings/
 .vscode
+
+# Runtime-generated plugin configuration (contains the API token)
+management_config.json
+management_config.json.bak

@@ -1,26 +1,24 @@
 {
-    "Group": "HytaleModding",
-    "Name": "ExamplePlugin",
-    "Version": "0.0.0",
-    "Description": "Description of your plugin",
+    "Group": "HytaleAssos",
+    "Name": "HytaleServerManagement",
+    "Version": "0.1.0",
+    "Description": "Server management for Hytale: native whitelist control exposed through a secured REST API.",
     "Authors": [
         {
-            "Name": "Your_Name",
-            "Email": "your.email@example.com",
-            "Url": "https://your-website.com"
+            "Name": "HytaleAssos"
         }
     ],
-    "Website": "https://your-plugin-website.com",
+    "Website": "https://github.com/HytaleAssos/hytale-server-management-plugin",
     "DisabledByDefault": false,
-    "IncludesAssetPack": true,
+    "IncludesAssetPack": false,
     "Dependencies": {
-        "Hytale:AssetModule": "*"
+        
     },
     "OptionalDependencies": {
         
     },
-    "ServerVersion": ">=0.5.3 <0.6.0",
-    "Main": "dev.hytalemodding.ExamplePlugin",
+    "ServerVersion": ">=0.6.5 <0.7.0",
+    "Main": "assos.hytale.servermanagement.ServerManagementPlugin",
     "UpdateChecker": {
         "CurseForge": ""
     }
