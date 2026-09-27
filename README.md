@@ -60,6 +60,10 @@ Base : `/api/v1` — toutes les réponses sont en JSON.
 | `GET`    | `/link`                           | État de la liaison avec `api-core`.       |
 | `POST`   | `/link`                           | Lie l'agent du serveur à `api-core`.      |
 | `DELETE` | `/link`                           | Délie l'agent du serveur.                 |
+| `GET`    | `/auth` et `/auth/status`         | État de l'authentification serveur.       |
+| `POST`   | `/auth/device`                    | Démarre le login OAuth par device code.   |
+| `POST`   | `/auth/profile`                   | Choisit un profil (`{"profile":"Nom"}` ou `{"index":0}`). |
+| `POST`   | `/auth/logout`                    | Déconnecte le serveur de son compte.      |
 | `GET`    | `/whitelist`                      | Liste les entrées + statut.              |
 | `GET`    | `/whitelist/status`               | Statut (`enabled`, `count`).             |
 | `POST`   | `/whitelist`                      | Ajoute un joueur (`{"player":"..."}`).   |
@@ -134,6 +138,35 @@ curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/link
 curl -X DELETE -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/link
 ```
 
+## Authentification serveur (device flow)
+
+Un serveur hébergé sans console interactive (conteneur, service systemd) peut être
+authentifié via l'API, sans TTY ni navigateur sur l'hôte :
+
+1. `POST /auth/device` démarre le flow OAuth « device ». La réponse contient le code
+   (`device.userCode`) et l'URL (`device.verificationUri`) dès qu'ils sont connus.
+   Le champ `started` indique si un flow a été lancé ; l'appel est idempotent tant
+   qu'un flow est en cours.
+2. L'opérateur ouvre `device.verificationUriComplete` sur n'importe quel appareil
+   (téléphone, navigateur) et valide.
+3. Si le compte possède plusieurs profils, la réponse de `GET /auth/status` expose
+   `pendingProfiles` ; on choisit avec `POST /auth/profile`
+   (`{"profile":"Nom"}` ou `{"index":0}`).
+4. `GET /auth/status` reflète `authenticated`, `authMode`, `tokenExpiry` et les
+   éventuelles erreurs (`lastError`).
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/auth/device
+curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/auth/status
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+     -d '{"profile":"MonPseudo"}' http://127.0.0.1:8080/api/v1/auth/profile
+curl -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/auth/logout
+```
+
+Cette API s'appuie sur `ServerAuthManager` du serveur Hytale, qui n'est pas une API
+publique documentée : elle est isolée dans `auth/AuthService`. L'authentification
+s'appuie sur `auth.enc` du serveur pour persister les tokens entre redémarrages.
+
 ## Architecture
 
 ```text
@@ -148,6 +181,8 @@ assos.hytale.servermanagement
 │   └── ApiCoreClient          # client HTTP JDK signé (events de session)
 ├── session/
 │   └── SessionTracker         # PlayerReady/Disconnect -> events api-core
+├── auth/
+│   └── AuthService            # device flow OAuth + statut d'authentification
 └── api/
     ├── ApiServer              # HttpServer JDK + garde loopback
     ├── ApiHandler             # routage REST

@@ -4,6 +4,7 @@ import assos.hytale.servermanagement.api.ApiServer;
 import assos.hytale.servermanagement.api.Json;
 import assos.hytale.servermanagement.api.ManagementFacade;
 import assos.hytale.servermanagement.apicore.ApiCoreClient;
+import assos.hytale.servermanagement.auth.AuthService;
 import assos.hytale.servermanagement.config.ManagementConfig;
 import assos.hytale.servermanagement.session.SessionTracker;
 import assos.hytale.servermanagement.whitelist.WhitelistService;
@@ -21,6 +22,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.util.Config;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.logging.Level;
 
 /**
@@ -39,6 +41,7 @@ public class ServerManagementPlugin extends JavaPlugin implements ManagementFaca
     private ApiServer apiServer;
     private ApiCoreClient apiCoreClient;
     private SessionTracker sessionTracker;
+    private final AuthService authService = new AuthService();
     private EventRegistration<String, PlayerReadyEvent> readyRegistration;
     private EventRegistration<Void, PlayerDisconnectEvent> disconnectRegistration;
 
@@ -233,6 +236,26 @@ public class ServerManagementPlugin extends JavaPlugin implements ManagementFaca
         root.addProperty("linked", false);
         root.addProperty("accepted", ok);
         return root;
+    }
+
+    @Override
+    public JsonObject buildAuthStatus() {
+        return authService.status();
+    }
+
+    @Override
+    public JsonObject startAuthDeviceFlow() {
+        return authService.startDeviceFlow();
+    }
+
+    @Override
+    public JsonObject selectAuthProfile(@Nullable String username, @Nullable Integer index) {
+        return authService.selectProfile(username, index);
+    }
+
+    @Override
+    public JsonObject logoutAuth() {
+        return authService.logout();
     }
 
     @Nonnull
