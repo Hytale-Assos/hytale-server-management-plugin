@@ -87,4 +87,41 @@ public final class Json {
         }
         return element.getAsBoolean();
     }
+
+    /**
+     * Returns an optional string field, trimmed, or {@code null} when absent.
+     *
+     * @param object the source object
+     * @param field  the field name
+     * @return the trimmed value or {@code null}
+     */
+    public static String getString(JsonObject object, String field) {
+        JsonElement element = object.get(field);
+        if (element == null || element.isJsonNull()) {
+            return null;
+        }
+        if (!element.isJsonPrimitive() || !element.getAsJsonPrimitive().isString()) {
+            throw new IllegalArgumentException("Field '" + field + "' must be a string");
+        }
+        String value = element.getAsString().trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    /**
+     * Returns an optional integer field, or {@code null} when absent.
+     *
+     * @param object the source object
+     * @param field  the field name
+     * @return the integer value or {@code null}
+     */
+    public static Integer getInt(JsonObject object, String field) {
+        JsonElement element = object.get(field);
+        if (element == null || element.isJsonNull()) {
+            return null;
+        }
+        if (!element.isJsonPrimitive() || !element.getAsJsonPrimitive().isNumber()) {
+            throw new IllegalArgumentException("Field '" + field + "' must be a number");
+        }
+        return element.getAsInt();
+    }
 }

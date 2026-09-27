@@ -34,6 +34,14 @@ import java.util.logging.Level;
  * GET    /api/v1/health
  * GET    /api/v1/status
  * POST   /api/v1/reload
+ * GET    /api/v1/link
+ * POST   /api/v1/link
+ * DELETE /api/v1/link
+ * GET    /api/v1/auth
+ * GET    /api/v1/auth/status
+ * POST   /api/v1/auth/device
+ * POST   /api/v1/auth/profile          {"profile":"Name"} or {"index":0}
+ * POST   /api/v1/auth/logout
  * GET    /api/v1/whitelist
  * GET    /api/v1/whitelist/status
  * POST   /api/v1/whitelist                 {"player":"NameOrUuid"}
@@ -136,6 +144,11 @@ public class ApiHandler implements HttpHandler {
             return;
         }
 
+        if ("auth".equals(segments[0])) {
+            handleAuth(exchange, method, segments);
+            return;
+        }
+
         if (!"whitelist".equals(segments[0])) {
             throw ApiException.notFound("Unknown endpoint");
         }
@@ -185,6 +198,43 @@ public class ApiHandler implements HttpHandler {
             case "DELETE" -> send(exchange, 200, facade.unlinkApiCore());
             default -> throw ApiException.methodNotAllowed("Method " + method + " is not allowed here");
         }
+    }
+
+    private void handleAuth(HttpExchange exchange, String method, String[] segments) throws Exception {
+        if (segments.length == 1) {
+            requireMethod(method, "GET");
+            send(exchange, 200, facade.buildAuthStatus());
+            return;
+        }
+        if (segments.length != 2) {
+            throw ApiException.notFound("Unknown endpoint");
+        }
+        switch (segments[1]) {
+            case "status" -> {
+                requireMethod(method, "GET");
+                send(exchange, 200, facade.buildAuthStatus());
+            }
+            case "device" -> {
+                requireMethod(method, "POST");
+                send(exchange, 200, facade.startAuthDeviceFlow());
+            }
+            case "profile" -> {
+                requireMethod(method, "POST");
+                handleAuthProfile(exchange);
+            }
+            case "logout" -> {
+                requireMethod(method, "POST");
+                send(exchange, 200, facade.logoutAuth());
+            }
+            default -> throw ApiException.notFound("Unknown endpoint");
+        }
+    }
+
+    private void handleAuthProfile(HttpExchange exchange) throws Exception {
+        JsonObject body = Json.parseObject(readBody(exchange));
+        String username = Json.getString(body, "profile");
+        Integer index = Json.getInt(body, "index");
+        send(exchange, 200, facade.selectAuthProfile(username, index));
     }
 
     private void handleWhitelistRoot(HttpExchange exchange, String method) throws Exception {
