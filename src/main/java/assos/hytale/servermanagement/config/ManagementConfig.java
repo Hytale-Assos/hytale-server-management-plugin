@@ -48,6 +48,26 @@ public class ManagementConfig {
                     (config, value, info) -> config.disconnectOnWhitelistRemoval = value,
                     (config, info) -> config.disconnectOnWhitelistRemoval)
             .add()
+            .append(new KeyedCodec<>("ApiCoreEnabled", Codec.BOOLEAN),
+                    (config, value, info) -> config.apiCoreEnabled = value,
+                    (config, info) -> config.apiCoreEnabled)
+            .add()
+            .append(new KeyedCodec<>("ApiCoreUrl", Codec.STRING),
+                    (config, value, info) -> config.apiCoreUrl = value,
+                    (config, info) -> config.apiCoreUrl)
+            .add()
+            .append(new KeyedCodec<>("ApiCoreApiKey", Codec.STRING),
+                    (config, value, info) -> config.apiCoreApiKey = value,
+                    (config, info) -> config.apiCoreApiKey)
+            .add()
+            .append(new KeyedCodec<>("ApiCoreHmacSecret", Codec.STRING),
+                    (config, value, info) -> config.apiCoreHmacSecret = value,
+                    (config, info) -> config.apiCoreHmacSecret)
+            .add()
+            .append(new KeyedCodec<>("ApiCoreServerId", Codec.STRING),
+                    (config, value, info) -> config.apiCoreServerId = value,
+                    (config, info) -> config.apiCoreServerId)
+            .add()
             .build();
 
     private boolean apiEnabled = true;
@@ -58,6 +78,11 @@ public class ManagementConfig {
     private boolean allowRemoteManagement = false;
     private boolean logRequests = true;
     private boolean disconnectOnWhitelistRemoval = true;
+    private boolean apiCoreEnabled = false;
+    private String apiCoreUrl = "http://127.0.0.1:3000";
+    private String apiCoreApiKey = "";
+    private String apiCoreHmacSecret = "";
+    private String apiCoreServerId = "";
 
     private ManagementConfig() {
     }
@@ -135,5 +160,45 @@ public class ManagementConfig {
 
     public void setDisconnectOnWhitelistRemoval(boolean disconnectOnWhitelistRemoval) {
         this.disconnectOnWhitelistRemoval = disconnectOnWhitelistRemoval;
+    }
+
+    public boolean isApiCoreEnabled() {
+        return apiCoreEnabled;
+    }
+
+    public void setApiCoreEnabled(boolean apiCoreEnabled) {
+        this.apiCoreEnabled = apiCoreEnabled;
+    }
+
+    public String getApiCoreUrl() {
+        return apiCoreUrl;
+    }
+
+    public void setApiCoreUrl(String apiCoreUrl) {
+        this.apiCoreUrl = apiCoreUrl;
+    }
+
+    public String getApiCoreApiKey() {
+        return apiCoreApiKey;
+    }
+
+    public void setApiCoreApiKey(String apiCoreApiKey) {
+        this.apiCoreApiKey = apiCoreApiKey;
+    }
+
+    public String getApiCoreHmacSecret() {
+        return apiCoreHmacSecret;
+    }
+
+    public void setApiCoreHmacSecret(String apiCoreHmacSecret) {
+        this.apiCoreHmacSecret = apiCoreHmacSecret;
+    }
+
+    public String getApiCoreServerId() {
+        return apiCoreServerId;
+    }
+
+    public void setApiCoreServerId(String apiCoreServerId) {
+        this.apiCoreServerId = apiCoreServerId;
     }
 }

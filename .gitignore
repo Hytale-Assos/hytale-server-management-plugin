@@ -14,3 +14,8 @@ run/
 # Runtime-generated plugin configuration (contains the API token)
 management_config.json
 management_config.json.bak
+
+# Webhook configuration (contains the webhook token) and pending outbox
+webhooks.json
+webhooks.json.bak
+webhook_outbox/

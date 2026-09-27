@@ -131,6 +131,11 @@ public class ApiHandler implements HttpHandler {
             return;
         }
 
+        if (segments.length == 1 && "link".equals(segments[0])) {
+            handleLink(exchange, method);
+            return;
+        }
+
         if (!"whitelist".equals(segments[0])) {
             throw ApiException.notFound("Unknown endpoint");
         }
@@ -171,6 +176,15 @@ public class ApiHandler implements HttpHandler {
         }, "HytaleServerManagement-Reload");
         reloadThread.setDaemon(true);
         reloadThread.start();
+    }
+
+    private void handleLink(HttpExchange exchange, String method) throws IOException {
+        switch (method) {
+            case "GET" -> send(exchange, 200, facade.buildLinkStatus());
+            case "POST" -> send(exchange, 200, facade.linkApiCore());
+            case "DELETE" -> send(exchange, 200, facade.unlinkApiCore());
+            default -> throw ApiException.methodNotAllowed("Method " + method + " is not allowed here");
+        }
     }
 
     private void handleWhitelistRoot(HttpExchange exchange, String method) throws Exception {

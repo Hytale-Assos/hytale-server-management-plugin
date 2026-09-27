@@ -51,13 +51,19 @@ public final class ProfileResolver {
         }
 
         UUID uuid = tryParseUuid(trimmed);
+        if (uuid != null) {
+            // A UUID is enough to grant/revoke the join permission: no remote
+            // lookup is needed, so api-core-driven changes work in offline mode.
+            return new ProfileServiceClient.PublicGameProfile(uuid, null);
+        }
+
         String sessionToken = requireSessionToken();
         ProfileServiceClient client = ServerAuthManager.getInstance().getProfileServiceClient();
         if (client == null) {
             throw new PlayerResolutionException("Profile service is not available on this server");
         }
 
-        ProfileServiceClient.PublicGameProfile profile = lookup(client, uuid, trimmed, sessionToken);
+        ProfileServiceClient.PublicGameProfile profile = lookup(client, null, trimmed, sessionToken);
         if (profile == null || profile.getUuid() == null) {
             throw new PlayerResolutionException("No Hytale profile found for '" + trimmed + "'");
         }
