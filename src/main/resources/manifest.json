@@ -1,7 +1,7 @@
 {
     "Group": "HytaleAssos",
     "Name": "HytaleServerManagement",
-    "Version": "0.1.1",
+    "Version": "0.1.2",
     "Description": "Server management for Hytale: native whitelist control exposed through a secured REST API.",
     "Authors": [
         {
