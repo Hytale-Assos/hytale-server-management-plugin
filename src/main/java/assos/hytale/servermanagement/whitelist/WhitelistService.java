@@ -78,28 +78,34 @@ public class WhitelistService {
         return entries;
     }
 
+    /**
+     * Adds a player to the whitelist. Idempotent: adding an already whitelisted
+     * player is a no-op and succeeds, so core-driven retries are safe.
+     */
     @Nonnull
     public CompletableFuture<WhitelistEntry> add(@Nonnull String identifier) {
         return supplyAsync(() -> {
             ProfileServiceClient.PublicGameProfile profile = profiles.resolve(identifier);
             UUID uuid = profile.getUuid();
             if (profiles.isWhitelisted(uuid)) {
-                throw new PlayerResolutionException(
-                        "'" + display(profile) + "' is already whitelisted");
+                return new WhitelistEntry(uuid, profile.getUsername());
             }
             accessControl.allowJoin(uuid);
             return new WhitelistEntry(uuid, profile.getUsername());
         });
     }
 
+    /**
+     * Removes a player from the whitelist. Idempotent: removing a player who is
+     * not whitelisted is a no-op and succeeds, so core-driven retries are safe.
+     */
     @Nonnull
     public CompletableFuture<WhitelistRemovalResult> remove(@Nonnull String identifier) {
         return supplyAsync(() -> {
             ProfileServiceClient.PublicGameProfile profile = profiles.resolve(identifier);
             UUID uuid = profile.getUuid();
             if (!profiles.isWhitelisted(uuid)) {
-                throw new PlayerResolutionException(
-                        "'" + display(profile) + "' is not whitelisted");
+                return new WhitelistRemovalResult(new WhitelistEntry(uuid, profile.getUsername()), false);
             }
             accessControl.disallowJoin(uuid);
 

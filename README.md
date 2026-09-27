@@ -39,6 +39,11 @@ données du plugin et contient :
 | `AllowRemoteManagement`   | `false`     | Autorise une écoute hors loopback (déconseillé).                   |
 | `LogRequests`             | `true`      | Journalise chaque requête.                                         |
 | `DisconnectOnWhitelistRemoval` | `true` | Déconnecte en jeu un joueur retiré de la whitelist.               |
+| `ApiCoreEnabled`          | `false`     | Active l'envoi des sessions joueur vers `api-core`.                |
+| `ApiCoreUrl`              | `http://127.0.0.1:3000` | URL de base de l'API centrale.                        |
+| `ApiCoreApiKey`           | *(vide)*    | API key du module `api-core` représentant le plugin.               |
+| `ApiCoreHmacSecret`       | *(vide)*    | Secret HMAC du module, pour signer les écritures.                  |
+| `ApiCoreServerId`         | *(vide)*    | UUID du serveur Hytale enregistré dans `api-core`.                 |
 
 > Si `ApiRequireAuth` est vrai et que `ApiToken` est vide, un token aléatoire est généré
 > et écrit dans le fichier. Consultez le fichier pour le récupérer.
@@ -52,6 +57,9 @@ Base : `/api/v1` — toutes les réponses sont en JSON.
 | `GET`    | `/health`                         | Ping simple + état whitelist.            |
 | `GET`    | `/status`                         | État complet du plugin, serveur, API.    |
 | `POST`   | `/reload`                         | Recharge la config et redémarre l'API.   |
+| `GET`    | `/link`                           | État de la liaison avec `api-core`.       |
+| `POST`   | `/link`                           | Lie l'agent du serveur à `api-core`.      |
+| `DELETE` | `/link`                           | Délie l'agent du serveur.                 |
 | `GET`    | `/whitelist`                      | Liste les entrées + statut.              |
 | `GET`    | `/whitelist/status`               | Statut (`enabled`, `count`).             |
 | `POST`   | `/whitelist`                      | Ajoute un joueur (`{"player":"..."}`).   |
@@ -85,6 +93,47 @@ immédiatement avec le message « You have been removed from the server whitelis
 réponse contient `"disconnected": true|false`. Le vidage complet (`DELETE /whitelist`)
 déconnecte tous les joueurs qui ont perdu l'accès et renvoie `"disconnected": <nombre>`.
 
+## Intégration `api-core`
+
+Quand `ApiCoreEnabled` est vrai et que les quatre clés `ApiCore*` sont renseignées,
+le plugin pousse les événements de session vers le webhook de l'API centrale
+(`POST /api/v1/webhook`) :
+
+- `PlayerReadyEvent` → `session_started` (une seule fois par session) ;
+- `PlayerDisconnectEvent` → `session_ended`.
+
+Les requêtes sont signées (`X-Api-Key` + `X-Timestamp` + `X-Signature` HMAC-SHA256)
+et envoyées sur un executor dédié : le thread du serveur de jeu n'est jamais
+bloqué. Si l'intégration est désactivée ou incomplète, le plugin fonctionne
+normalement et journalise l'événement en `FINE`.
+
+### Whitelist pilotée par `api-core`
+
+La liaison à `api-core` est **manuelle et explicite** (rien n'est enregistré au
+démarrage) :
+
+| Méthode  | Endpoint        | Description                                             |
+|----------|-----------------|---------------------------------------------------------|
+| `GET`    | `/api/v1/link`  | État de la liaison (core, serverId, `linked`).          |
+| `POST`   | `/api/v1/link`  | Enregistre l'agent du serveur auprès d'`api-core`.       |
+| `DELETE` | `/api/v1/link`  | Désenregistre l'agent.                                   |
+
+`POST /api/v1/link` appelle `PUT /api/v1/servers/{ApiCoreServerId}/agent` avec
+l'URL loopback du plugin et son token Bearer. `api-core` pousse alors les
+ajouts/retraits de whitelist vers `POST /api/v1/whitelist`
+(body `{"player":"<uuid>"}`) et `DELETE /api/v1/whitelist/{uuid}`. Les deux
+opérations sont **idempotentes** côté plugin (ajouter un joueur déjà whitelisté,
+ou retirer un joueur absent, réussit sans erreur) pour supporter les retries de
+la file de `api-core`.
+
+Exemple :
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/link
+curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/link
+curl -X DELETE -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/link
+```
+
 ## Architecture
 
 ```text
@@ -95,6 +144,10 @@ assos.hytale.servermanagement
 │   ├── WhitelistService       # wrapper thread-safe de AccessControlModule
 │   ├── ProfileResolver        # pseudo/UUID -> profil Hytale
 │   └── WhitelistEntry         # DTO
+├── apicore/
+│   └── ApiCoreClient          # client HTTP JDK signé (events de session)
+├── session/
+│   └── SessionTracker         # PlayerReady/Disconnect -> events api-core
 └── api/
     ├── ApiServer              # HttpServer JDK + garde loopback
     ├── ApiHandler             # routage REST
