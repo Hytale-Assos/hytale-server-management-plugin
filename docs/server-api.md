@@ -1,4 +1,4 @@
-# Rapport — API serveur Hytale (0.6.5)
+# Rapport — API serveur Hytale (0.7.2)
 
 Ce document recense ce qu'un plugin serveur peut **observer** et **piloter** sur le
 serveur Hytale lui-même via `com.hypixel.hytale.server.core`. Il complète
@@ -7,7 +7,7 @@ technique : version et mises à jour, état du serveur, mondes, sauvegardes, rep
 crash, configuration et commandes natives.
 
 > Toutes les classes citées proviennent du serveur Hytale. Les informations ont été
-> extraites du jar `HytaleServer.jar` installé (version `0.6.5`, patchline `release`).
+> extraites du jar `HytaleServer.jar` installé (version `0.7.2`, patchline `release`).
 > Aucune API « console d'administration » clé-en-main n'existe : les actions serveur
 > passent soit par des singletons (`HytaleServer`, `Universe`, `UpdateModule`), soit par
 > l'exécution de commandes natives via `CommandManager`.
@@ -23,7 +23,7 @@ par `com.hypixel.hytale.common.util.java.ManifestUtil` :
 
 | Méthode | Description |
 |---------|-------------|
-| `ManifestUtil.getImplementationVersion()` | Version (`0.6.5`) |
+| `ManifestUtil.getImplementationVersion()` | Version (`0.7.2`) |
 | `ManifestUtil.getVersion()` | Version |
 | `ManifestUtil.getImplementationRevisionId()` | Hash de révision (commit) |
 | `ManifestUtil.getPatchline()` | Patchline courante (`release`, `beta`, …) |

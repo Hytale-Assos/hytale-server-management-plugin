@@ -10,7 +10,7 @@ Plugin serveur Hytale développé par l'association étudiante **HytaleAssos**.
 
 - Langage : Java 25
 - Build : Gradle (wrapper inclus), plugin `com.azuredoom.hytale-tools`
-- Cible : serveur Hytale `>=0.6.5 <0.7.0`
+- Cible : serveur Hytale `>=0.7.2 <0.8.0`
 - Package : `assos.hytale.servermanagement`
 - Pas de commande en jeu : toute l'administration passe par l'API REST.
 - HTTP : `com.sun.net.httpserver` du JDK (ne jamais ajouter de dépendance HTTP).

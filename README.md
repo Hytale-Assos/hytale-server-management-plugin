@@ -10,7 +10,7 @@ l'administration se fait par l'API HTTP.
 
 - Java 25
 - [Hytale Gradle Plugin](https://github.com/AzureDoom/Hytale-Gradle-Plugin) (`com.azuredoom.hytale-tools`)
-- Serveur ciblé : Hytale `>=0.6.5 <0.7.0`
+- Serveur ciblé : Hytale `>=0.7.2 <0.8.0`
 - HTTP : `com.sun.net.httpserver` du JDK (aucune dépendance à embarquer)
 - JSON : Gson fourni par le serveur Hytale
 
