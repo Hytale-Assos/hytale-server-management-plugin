@@ -1,4 +1,4 @@
-# Rapport — Données et actions disponibles sur un joueur (Hytale 0.6.5)
+# Rapport — Données et actions disponibles sur un joueur (Hytale 0.7.2)
 
 Ce document recense ce qu'un plugin serveur peut **observer** et **faire** sur un joueur
 via l'API Hytale (`com.hypixel.hytale.server.core`). Il sert de référence pour les
